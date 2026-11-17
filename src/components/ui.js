@@ -131,6 +131,24 @@ export function Chip({ label, selected, onPress }) {
   );
 }
 
+// Progress bar with a text label, so the value is never shown by color alone.
+export function ProgressBar({ fraction, label }) {
+  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+  return (
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+    >
+      <View style={styles.barTrack}>
+        <View style={[styles.barFill, { width: `${pct}%` }]} />
+      </View>
+      <Text style={styles.barLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export function confirmAction({ title, message, confirmText = 'Confirm', destructive = false, onConfirm }) {
   Alert.alert(title, message, [
     { text: 'Cancel', style: 'cancel' },
@@ -144,6 +162,9 @@ export function reportError(error) {
 }
 
 const styles = StyleSheet.create({
+  barTrack: { height: 12, borderRadius: 6, backgroundColor: '#E5E7EB', overflow: 'hidden' },
+  barFill: { height: 12, borderRadius: 6, backgroundColor: colors.primary },
+  barLabel: { fontSize: 14, fontWeight: '700', color: colors.text, marginTop: 6 },
   btn: {
     minHeight: 52,
     borderRadius: radius.md,

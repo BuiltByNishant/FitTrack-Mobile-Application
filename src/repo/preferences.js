@@ -13,11 +13,3 @@ export async function setPref(key, value) {
     [key, String(value)]
   );
 }
-
-export async function getWeightUnit() {
-  return (await getPref('weightUnit', 'kg')) === 'lb' ? 'lb' : 'kg';
-}
-
-export async function setWeightUnit(unit) {
-  await setPref('weightUnit', unit === 'lb' ? 'lb' : 'kg');
-}

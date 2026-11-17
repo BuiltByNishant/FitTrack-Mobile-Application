@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { deleteSession, getActiveSession, startSessionFromTemplate } from '../repo/sessions';
+import { deleteSession, getActiveSession, startSessionFromCustomWorkout, startSessionFromTemplate } from '../repo/sessions';
 import { reportError } from '../components/ui';
 
 // Runs `loader` every time the screen comes into focus, so screens always show saved data.
@@ -13,14 +13,14 @@ export function useFocusLoad(loader) {
   );
 }
 
-// Starts one of the templates and opens the active workout screen.
+// Starts a built-in template ({ template }) or a saved custom workout ({ customId }) and opens the active workout screen.
 // If an unfinished workout exists, the person chooses to resume it or replace it.
-export async function beginWorkout(template) {
+export async function beginWorkout(target) {
   try {
     const active = await getActiveSession();
     const open = async () => {
       try {
-        const id = await startSessionFromTemplate(template);
+        const id = target.customId != null ? await startSessionFromCustomWorkout(target.customId) : await startSessionFromTemplate(target.template);
         router.push(`/workout/${id}`);
       } catch (e) {
         reportError(e);

@@ -24,3 +24,26 @@ export function formatWeight(kg, unit) {
 export function weightInputText(kg, unit) {
   return formatNumber(kgToDisplay(kg, unit));
 }
+
+// ---------- Height (stored in centimetres) ----------
+export const HEIGHT_UNITS = ['cm', 'ftin'];
+const CM_PER_INCH = 2.54;
+
+// 175.26 cm -> { ft: 5, inches: 9 }. Inches are rounded to the nearest whole inch.
+export function cmToFeetInches(cm) {
+  let totalInches = Math.round(cm / CM_PER_INCH);
+  const ft = Math.floor(totalInches / 12);
+  return { ft, inches: totalInches - ft * 12 };
+}
+
+export function feetInchesToCm(ft, inches) {
+  return (ft * 12 + inches) * CM_PER_INCH;
+}
+
+export function formatHeight(cm, unit) {
+  if (unit === 'ftin') {
+    const { ft, inches } = cmToFeetInches(cm);
+    return `${ft} ft ${inches} in`;
+  }
+  return `${formatNumber(cm)} cm`;
+}

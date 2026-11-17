@@ -30,3 +30,50 @@ export function validateWeight(text) {
   if (n > 5000) return { ok: false, error: 'Weight looks too high. Check the number.' };
   return { ok: true, value: n };
 }
+
+// ---------- Body measurements (FitTrack 1.1) ----------
+// Positive numbers only. The upper limits just catch typing slips such as an extra zero.
+
+export function validateBodyWeight(text, { required = true } = {}) {
+  const t = String(text ?? '').trim().replace(',', '.');
+  if (!t) return required ? { ok: false, error: 'Enter a weight.' } : { ok: true, value: null };
+  if (t.startsWith('-')) return { ok: false, error: 'Weight must be a positive number.' };
+  if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return { ok: false, error: 'Weight must be a number, like 72.5.' };
+  const n = Number(t);
+  if (!(n > 0)) return { ok: false, error: 'Weight must be greater than zero.' };
+  if (n > 700) return { ok: false, error: 'That weight looks too high. Check the number.' };
+  return { ok: true, value: n };
+}
+
+export function validateHeightCm(text, { required = false } = {}) {
+  const t = String(text ?? '').trim().replace(',', '.');
+  if (!t) return required ? { ok: false, error: 'Enter a height.' } : { ok: true, value: null };
+  if (t.startsWith('-')) return { ok: false, error: 'Height must be a positive number.' };
+  if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return { ok: false, error: 'Height must be a number, like 175.' };
+  const n = Number(t);
+  if (!(n > 0)) return { ok: false, error: 'Height must be greater than zero.' };
+  if (n < 50 || n > 300) return { ok: false, error: 'Height should be between 50 and 300 cm.' };
+  return { ok: true, value: n };
+}
+
+// Feet and inches boxes. Both blank means "no height". Returns centimetres.
+export function validateFeetInches(ftText, inText) {
+  const ft = String(ftText ?? '').trim();
+  const inch = String(inText ?? '').trim();
+  if (!ft && !inch) return { ok: true, value: null };
+  if (!/^\d+$/.test(ft)) return { ok: false, error: 'Feet must be a whole number, like 5.' };
+  if (inch && !/^(\d+\.?\d*|\.\d+)$/.test(inch.replace(',', '.'))) {
+    return { ok: false, error: 'Inches must be a number from 0 to 11, like 9.' };
+  }
+  const feet = parseInt(ft, 10);
+  const inches = inch ? Number(inch.replace(',', '.')) : 0;
+  if (inches >= 12) return { ok: false, error: 'Inches must be less than 12. Add a foot instead.' };
+  const cm = (feet * 12 + inches) * 2.54;
+  if (!(cm > 0)) return { ok: false, error: 'Height must be greater than zero.' };
+  if (cm < 50 || cm > 300) return { ok: false, error: 'Height should be between 1 ft 8 in and 9 ft 10 in.' };
+  return { ok: true, value: cm };
+}
+
+export function validateWeeklyGoal(n) {
+  return Number.isInteger(n) && n >= 1 && n <= 7;
+}
