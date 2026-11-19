@@ -10,7 +10,7 @@ const BASE_KG = {
   'Leg Press': 120, 'Leg Curl': 35, 'Hip Thrust': 80, 'Standing Calf Raise': 60,
 };
 
-// Adds about four weeks of completed example workouts so Home and History have data to show.
+// Adds about four weeks of example workouts and weight check-ins so Home, Weight and History have data to show.
 export async function loadDemoData() {
   const db = await getDb();
   await db.withTransactionAsync(async () => {
@@ -19,6 +19,40 @@ export async function loadDemoData() {
     exRows.forEach((r) => {
       exId[r.name] = r.id;
     });
+
+    // Weight check-ins and profile: only added where nothing exists yet, so real data is never overwritten.
+    const weightCount = await db.getFirstAsync('SELECT COUNT(*) AS n FROM weight_entries');
+    if (!weightCount?.n) {
+      const demoWeights = [[27, 80.4], [20, 79.8], [13, 79.1], [6, 78.6], [0, 78.1]];
+      for (const [daysAgo, kg] of demoWeights) {
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        d.setHours(12, 0, 0, 0);
+        await db.runAsync('INSERT INTO weight_entries (measured_at, weight_kg) VALUES (?, ?)', [d.toISOString(), kg]);
+      }
+    }
+    await db.runAsync(
+      `UPDATE user_profile SET
+         display_name = COALESCE(NULLIF(display_name, ''), 'Alex'),
+         height_cm = COALESCE(height_cm, 175),
+         target_weight_kg = COALESCE(target_weight_kg, 75)
+       WHERE id = 1`
+    );
+
+    // A sample custom workout (only if none exist yet).
+    const routineCount = await db.getFirstAsync('SELECT COUNT(*) AS n FROM custom_workouts');
+    if (!routineCount?.n) {
+      const nowIso = new Date().toISOString();
+      const res = await db.runAsync('INSERT INTO custom_workouts (name, created_at, updated_at) VALUES (?, ?, ?)', ['Push Day', nowIso, nowIso]);
+      const plan = [['Barbell Bench Press', 4, 8], ['Overhead Press', 3, 10], ['Triceps Pushdown', 3, 12]];
+      for (let i = 0; i < plan.length; i++) {
+        if (!exId[plan[i][0]]) continue;
+        await db.runAsync(
+          'INSERT INTO custom_workout_items (workout_id, exercise_id, position, target_sets, target_reps) VALUES (?, ?, ?, ?, ?)',
+          [res.lastInsertRowId, exId[plan[i][0]], i, plan[i][1], plan[i][2]]
+        );
+      }
+    }
 
     const ordered = [...DAYS_AGO].reverse(); // oldest first so weights can climb
     for (let i = 0; i < ordered.length; i++) {

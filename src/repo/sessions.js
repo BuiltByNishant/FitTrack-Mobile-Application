@@ -25,14 +25,18 @@ async function lastCompletedWeightKg(db, exerciseId) {
   return row?.weightKg ?? 0;
 }
 
-async function insertStarterSets(db, sessionId, exerciseId, reps) {
+async function insertSets(db, sessionId, exerciseId, reps, sets) {
   const weightKg = await lastCompletedWeightKg(db, exerciseId);
-  for (let n = 1; n <= SETS_PER_EXERCISE; n++) {
+  for (let n = 1; n <= sets; n++) {
     await db.runAsync(
       'INSERT INTO set_entries (session_id, exercise_id, set_number, reps, weight_kg, completed) VALUES (?, ?, ?, ?, ?, 0)',
       [sessionId, exerciseId, n, reps, weightKg]
     );
   }
+}
+
+function insertStarterSets(db, sessionId, exerciseId, reps) {
+  return insertSets(db, sessionId, exerciseId, reps, SETS_PER_EXERCISE);
 }
 
 // Creates and saves the session immediately, so it survives leaving the screen or closing the app.
@@ -49,6 +53,29 @@ export async function startSessionFromTemplate(template) {
     for (const item of template.exercises) {
       const ex = await db.getFirstAsync('SELECT id FROM exercises WHERE name = ?', [item.name]);
       if (ex) await insertStarterSets(db, sessionId, ex.id, item.reps);
+    }
+  });
+  return sessionId;
+}
+
+// Copies a saved custom workout's plan (order, sets, reps) into a brand-new session.
+// The session keeps no link to the routine, so later routine edits or deletion cannot change it.
+export async function startSessionFromCustomWorkout(workoutId) {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  let sessionId;
+  await db.withTransactionAsync(async () => {
+    const workout = await db.getFirstAsync('SELECT name FROM custom_workouts WHERE id = ?', [workoutId]);
+    if (!workout) throw new Error('That workout no longer exists.');
+    const items = await db.getAllAsync(
+      `SELECT exercise_id AS exerciseId, target_sets AS targetSets, target_reps AS targetReps
+       FROM custom_workout_items WHERE workout_id = ? ORDER BY position`,
+      [workoutId]
+    );
+    const res = await db.runAsync('INSERT INTO workout_sessions (title, started_at) VALUES (?, ?)', [workout.name, now]);
+    sessionId = res.lastInsertRowId;
+    for (const item of items) {
+      await insertSets(db, sessionId, item.exerciseId, item.targetReps, item.targetSets);
     }
   });
   return sessionId;

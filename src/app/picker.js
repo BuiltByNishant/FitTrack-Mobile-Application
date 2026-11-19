@@ -8,13 +8,17 @@ import { colors, MIN_TOUCH, radius, spacing } from '../theme';
 import { Button, Chip, FieldError, reportError } from '../components/ui';
 import { createExercise, listExercises } from '../repo/exercises';
 import { addExerciseToSession, getSessionDetail } from '../repo/sessions';
+import { setPickerResult } from '../state/pickerResult';
 import { EQUIPMENT, MUSCLE_GROUPS } from '../db/seed';
 import { validateName } from '../utils/validation';
 
 // Exercise picker: search the starter library (grouped by muscle group) or create a custom exercise.
-// Choosing an exercise adds it to the active workout with three starter sets.
+// Session mode (default): choosing an exercise adds it to the active workout with three starter sets.
+// Routine mode (mode=routine): choose several exercises and hand them back to the workout builder.
 export default function PickerScreen() {
-  const { sessionId } = useLocalSearchParams();
+  const { sessionId, mode, exclude } = useLocalSearchParams();
+  const routineMode = mode === 'routine';
+  const [selected, setSelected] = useState([]);
   const insets = useSafeAreaInsets();
   const [exercises, setExercises] = useState([]);
   const [inSession, setInSession] = useState([]);
@@ -26,10 +30,15 @@ export default function PickerScreen() {
   const [createError, setCreateError] = useState(null);
 
   const load = useCallback(async () => {
-    const [list, detail] = await Promise.all([listExercises(), getSessionDetail(Number(sessionId))]);
+    const list = await listExercises();
     setExercises(list);
-    setInSession(detail ? detail.exercises.map((e) => e.exerciseId) : []);
-  }, [sessionId]);
+    if (routineMode) {
+      setInSession(String(exclude ?? '').split(',').filter(Boolean).map(Number));
+    } else {
+      const detail = await getSessionDetail(Number(sessionId));
+      setInSession(detail ? detail.exercises.map((e) => e.exerciseId) : []);
+    }
+  }, [sessionId, routineMode, exclude]);
 
   useEffect(() => {
     load().catch(reportError);
@@ -44,6 +53,15 @@ export default function PickerScreen() {
     }
   }
 
+  function toggle(exerciseId) {
+    setSelected((cur) => (cur.includes(exerciseId) ? cur.filter((x) => x !== exerciseId) : [...cur, exerciseId]));
+  }
+
+  function confirmSelection() {
+    setPickerResult(selected);
+    router.back();
+  }
+
   async function handleCreate() {
     const check = validateName(newName, 'Exercise name');
     if (!check.ok) {
@@ -52,6 +70,14 @@ export default function PickerScreen() {
     }
     try {
       const id = await createExercise({ name: check.value, muscleGroup: newGroup, equipment: newEquipment });
+      if (routineMode) {
+        // saved to the library and ticked, so it can be added with the rest
+        await load();
+        setSelected((cur) => [...cur, id]);
+        setNewName('');
+        setCreating(false);
+        return;
+      }
       await addAndClose(id); // saved to the library AND added to this workout
     } catch (e) {
       setCreateError(e.message);
@@ -115,7 +141,7 @@ export default function PickerScreen() {
               <Chip key={g} label={g} selected={newEquipment === g} onPress={() => setNewEquipment(g)} />
             ))}
           </View>
-          <Button title="Save and add to workout" icon="add" onPress={handleCreate} />
+          <Button title={routineMode ? 'Save exercise' : 'Save and add to workout'} icon="add" onPress={handleCreate} />
         </View>
       ) : null}
 
@@ -134,15 +160,19 @@ export default function PickerScreen() {
         )}
         renderItem={({ item }) => {
           const added = inSession.includes(item.id);
+          const on = selected.includes(item.id);
           return (
             <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: added }}
-              accessibilityLabel={`${item.name}, ${item.equipment}${added ? ', already in this workout' : '. Add to workout'}`}
+              accessibilityRole={routineMode ? 'checkbox' : 'button'}
+              accessibilityState={routineMode ? { checked: on, disabled: added } : { disabled: added }}
+              accessibilityLabel={`${item.name}, ${item.equipment}${added ? ', already in this workout' : routineMode ? '' : '. Add to workout'}`}
               disabled={added}
-              onPress={() => addAndClose(item.id)}
-              style={[styles.row, added && { opacity: 0.55 }]}
+              onPress={() => (routineMode ? toggle(item.id) : addAndClose(item.id))}
+              style={[styles.row, added && { opacity: 0.55 }, on && styles.rowOn]}
             >
+              {routineMode && !added ? (
+                <Ionicons name={on ? 'checkbox' : 'square-outline'} size={26} color={on ? colors.primary : colors.muted} style={{ marginRight: spacing.md }} />
+              ) : null}
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowName}>{item.name}</Text>
                 <Text style={styles.rowMeta}>
@@ -150,11 +180,21 @@ export default function PickerScreen() {
                   {item.isCustom ? ' · Custom' : ''}
                 </Text>
               </View>
-              {added ? <Text style={styles.addedText}>Added</Text> : <Ionicons name="add-circle" size={28} color={colors.primary} />}
+              {added ? <Text style={styles.addedText}>Added</Text> : routineMode ? null : <Ionicons name="add-circle" size={28} color={colors.primary} />}
             </Pressable>
           );
         }}
       />
+
+      {routineMode ? (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <Button
+            title={selected.length ? `Add ${selected.length} exercise${selected.length === 1 ? '' : 's'} to workout` : 'Select exercises to add'}
+            disabled={selected.length === 0}
+            onPress={confirmSelection}
+          />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -212,5 +252,7 @@ const styles = StyleSheet.create({
   rowName: { fontSize: 16, fontWeight: '700', color: colors.text },
   rowMeta: { fontSize: 13, color: colors.muted, marginTop: 2 },
   addedText: { fontSize: 13, fontWeight: '800', color: colors.muted },
+  rowOn: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  footer: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card },
   empty: { textAlign: 'center', color: colors.muted, marginTop: spacing.xl, fontSize: 15 },
 });
