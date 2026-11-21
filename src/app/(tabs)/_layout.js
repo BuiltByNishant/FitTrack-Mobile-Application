@@ -7,6 +7,7 @@ const ICONS = {
   index: ['home', 'home-outline'],
   workouts: ['barbell', 'barbell-outline'],
   history: ['time', 'time-outline'],
+  weight: ['scale', 'scale-outline'],
   settings: ['settings', 'settings-outline'],
 };
 
@@ -27,6 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Home', headerTitle: 'FitTrack' }} />
       <Tabs.Screen name="workouts" options={{ title: 'Workouts' }} />
       <Tabs.Screen name="history" options={{ title: 'History' }} />
+      <Tabs.Screen name="weight" options={{ title: 'Weight', headerTitle: 'Weight log' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>
   );

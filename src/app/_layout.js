@@ -64,6 +64,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="workout/[id]" options={{ title: 'Workout' }} />
           <Stack.Screen name="session/[id]" options={{ title: 'Workout details' }} />
+          <Stack.Screen name="profile" options={{ title: 'My Profile' }} />
+          <Stack.Screen name="weight-entry" options={{ title: 'Weight check-in', presentation: 'modal' }} />
+          <Stack.Screen name="builder" options={{ title: 'Workout' }} />
+          <Stack.Screen name="routine/[id]" options={{ title: 'My workout' }} />
           <Stack.Screen name="picker" options={{ title: 'Add exercise', presentation: 'modal' }} />
         </Stack>
       </SettingsProvider>
