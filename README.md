@@ -1,174 +1,310 @@
 # FitTrack
 
-Offline-first Android fitness tracker: three ready-made workouts, **your own saved workouts (new in 1.2)**, set tracking and history,
-a personal profile, dated weight check-ins, goal progress, a weekly workout goal and a personal dashboard.
-kg/lb, cm/ft-in and an optional daily reminder.
-Built with React Native, Expo Router, Expo SQLite and Expo Notifications. No account, no server.
-Package: `com.fittrack.app`, version 1.2.0.
+[![React Native](https://img.shields.io/badge/React%20Native-0.88-61DAFB?logo=react&logoColor=black)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2058-000020?logo=expo&logoColor=white)](https://expo.dev/)
+[![Storage](https://img.shields.io/badge/Storage-SQLite%20(on%20device)-003B57?logo=sqlite&logoColor=white)](https://docs.expo.dev/versions/latest/sdk/sqlite/)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)](https://www.android.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Run it on your Samsung S23 (Expo Go)
+FitTrack is an offline-first fitness tracker for Android, built with React Native and Expo. You can plan workouts, log every set, follow your body weight against a goal, and get an optional daily reminder. Everything you enter is stored in a database on your phone. There is no account, no server and no internet requirement.
 
-1. Install **Node.js LTS** on your computer and **Expo Go** from the Play Store on your phone.
-2. In this folder:
-   ```
-   npm install
-   npx expo start
-   ```
-3. Phone and computer on the same Wi-Fi, scan the QR code with Expo Go. If it cannot connect, use `npx expo start --tunnel`.
+Developed as Application Development Project 356.
 
-This project uses **Expo SDK 58** (your document says 57). Expo Go normally supports only the newest SDK, so keep Expo Go updated.
-Scheduled *local* reminders work in Expo Go; only remote push is unavailable there, and FitTrack does not use push.
+<!--
+Screenshots: add your own images to docs/screenshots/ and uncomment this block.
 
-## What is new in 1.2: Custom Workout Builder
+## Screenshots
 
-| Requirement | Where / how |
+| Home | Active workout | Weight log |
+| --- | --- | --- |
+| ![Home](docs/screenshots/home.png) | ![Active workout](docs/screenshots/workout.png) | ![Weight log](docs/screenshots/weight.png) |
+-->
+
+## Contents
+
+- [Features](#features)
+- [How the app works](#how-the-app-works)
+- [Technology](#technology)
+- [Getting started](#getting-started)
+- [Build an Android APK](#build-an-android-apk)
+- [Using the app](#using-the-app)
+- [Project structure](#project-structure)
+- [Local data](#local-data)
+- [Design and accessibility](#design-and-accessibility)
+- [Privacy](#privacy)
+- [Troubleshooting](#troubleshooting)
+- [Not included](#not-included)
+- [License](#license)
+
+## Features
+
+### Workouts
+
+- **Exercise library:** 44 starter exercises across 8 muscle groups (Chest, Back, Shoulders, Biceps, Triceps, Legs, Glutes, Core) and 6 equipment types (Barbell, Dumbbell, Machine, Cable, Bodyweight, Other). Search the library, or add your own exercises by choosing a muscle group and equipment.
+- **Built-in workouts:** three ready-made workouts, each starting with planned sets and reps.
+  - *Full Body A:* Back Squat, Barbell Bench Press, Barbell Row, Overhead Press, Romanian Deadlift
+  - *Upper Body:* Barbell Bench Press, Barbell Row, Overhead Press, Lat Pulldown, Dumbbell Curl, Triceps Pushdown
+  - *Lower Body:* Back Squat, Romanian Deadlift, Leg Press, Leg Curl, Hip Thrust, Standing Calf Raise
+- **Custom workouts:** build your own routine with a name, exercises from the library, and a separate number of sets and target reps for each exercise. Reorder or remove exercises, edit a saved routine, duplicate it, or delete it.
+- **Set logging:** a live timer, editable reps and weight for every set, and a check button to mark each set done. New sets start from the weight you last completed for that exercise. You can add more exercises while you train.
+- **Resume a workout:** a workout is saved as you type, so you can leave the screen or close the app and resume it from Home.
+- **History:** finished workouts are listed by date with duration, sets done and volume. Open one to see every exercise and set.
+
+### Body progress
+
+- **Profile:** an optional display name, height, current weight and target weight.
+- **Weight log:** add dated check-ins (today, yesterday or any earlier date) with an optional note, then edit or delete them. A trend chart shows your latest check-ins, and the newest one is your current weight.
+- **Goal progress:** the difference between your current weight and your target, with a progress bar. It works for losing or gaining weight.
+- **Weekly workout goal:** choose 1 to 7 workouts per week and see completed sessions against it.
+
+### Everyday use
+
+- **Home dashboard:** a time-of-day greeting, current weight, goal progress, workouts this week, your best set, reminder status, recent sessions and a quick Start workout button.
+- **Units:** weight in kilograms or pounds, and height in centimetres or feet and inches.
+- **Daily reminder:** an optional repeating notification at 7:00 AM, 9:00 AM, 6:00 PM or 8:00 PM. Turn it on, change the time, or turn it off.
+- **Demo data and data controls:** load example data for a walkthrough, or clear your profile, weight history, workout history, or everything, from Settings.
+
+## How the app works
+
+### Input rules
+
+| Input | Rule |
 | --- | --- |
-| CWB-01 Create a routine | Workouts tab > Create workout. Needs a name (spaces trimmed) and at least one exercise |
-| CWB-02 Choose exercises | Add exercises opens the library picker (multi-select, search, custom exercises) |
-| CWB-03 Set targets | Each exercise has its own Sets and Target reps (positive whole numbers; sets up to 20) |
-| CWB-04 Arrange the plan | Move up / down and remove, before saving |
-| CWB-05 Edit a routine | Details > Edit changes name, exercises, order and targets |
-| CWB-06 Start a routine | Start creates a normal session in the saved order with the planned sets and reps |
-| CWB-07 Keep history stable | Starting copies the plan into session and set rows, so editing or deleting a routine never changes past sessions |
-| CWB-08 Persist offline | Saved in SQLite (`custom_workouts`, `custom_workout_items`), kept after closing the app |
+| Set reps | Whole number from 1 to 1000 |
+| Set weight | Number from 0 up (0 is allowed for bodyweight sets) |
+| Body weight | Positive number, up to 700 kg |
+| Height | Positive number from 50 to 300 cm, or the equivalent in feet and inches |
+| Workout name, exercise name | Not blank; spaces are trimmed; up to 60 characters |
+| Custom exercise name | Must not match an existing exercise (not case-sensitive) |
+| Planned sets in a custom workout | Whole number from 1 to 20 |
+| Target reps in a custom workout | Whole number from 1 to 1000 |
+| Custom workout | Needs a name and at least one exercise; the same exercise cannot be added twice |
+| Weekly workout goal | Whole number from 1 to 7 |
+| Display name | Optional, up to 40 characters |
 
-Also included: Duplicate and Delete (with a warning that history is kept), a "Discard changes?" prompt when cancelling an edited form, and a duplicate-exercise guard.
-The three built-in workouts remain in the Workouts tab under "Built-in workouts".
-Upgrading from 1.1 keeps all existing data (database migration 2 to 3 only adds the two routine tables).
+Invalid input shows a message next to the field and is never saved.
 
-## What was added in 1.1 (Enhancement Proposal)
+### Calculations and rules
 
-| Proposal item | Where |
+- **Units:** weight is always stored in kilograms and height in centimetres. The unit setting only changes how values are shown, so switching units never changes saved data.
+- **Conversions:** `lb = kg ÷ 0.45359237`. For feet and inches the total inches are rounded first, then split: `totalIn = round(cm ÷ 2.54)`, `ft = floor(totalIn ÷ 12)`, `in = totalIn − 12 × ft`.
+- **Current weight:** the newest weight check-in. If you delete it, the one before it becomes current.
+- **Goal progress:** measured from your first check-in toward the target. When your weight reaches or passes the target, the goal shows as reached.
+- **Weekly count:** completed workouts started in the current calendar week, Monday to Sunday, in the phone's local time.
+- **Best set:** the heaviest weight among completed sets above 0 in finished workouts. Ties go to more reps, then to the most recent.
+- **Volume:** `weight × reps` summed over completed sets. It is a simple logging figure, not a measure of workout quality.
+- **Finishing a workout:** at least one set must be marked done. Sets you did not mark done are kept in history as "Not done".
+- **History stays stable:** starting a built-in or custom workout copies its plan into a new session. Editing or deleting a custom workout later never changes workouts you already did.
+- **Reminder permission:** Android notification permission is requested only when you turn the reminder on. If you decline, the reminder stays off and Settings explains how to allow it.
+
+## Technology
+
+| Area | Technology |
 | --- | --- |
-| Personal profile | My Profile (open from Home): display name, height, current weight, optional target weight, units |
-| Weight check-ins | Weight tab: add for today or another date, edit, delete; the newest entry is the current weight |
-| Goal progress | Weight tab and Home: current weight, target, remaining difference, progress bar |
-| Weekly workout goal | Settings: 1 to 7 workouts per week; Home shows "2 of 3" with a progress bar |
-| Personal dashboard | Home: greeting, current weight, goal progress, workouts this week, reminder status |
-| Units | Settings or My Profile: kg/lb and cm/ft-in. Saved values stay in kg and cm; units change only the display |
-| Clear local data | Settings: clear profile, clear weight history, delete workout history, or erase everything |
-| Reminder | Unchanged: optional, permission asked only when switched on |
+| Framework | React Native 0.88, React 19.3 |
+| Tooling | Expo SDK 58 |
+| Navigation | Expo Router (file-based routes with a tab bar and modal screens) |
+| Storage | Expo SQLite, with write-ahead logging and foreign keys enabled |
+| Notifications | Expo Notifications (local, scheduled reminders; no push service) |
+| Date selection | `@react-native-community/datetimepicker` (native Android date dialog) |
+| Keyboard handling | `react-native-keyboard-controller` (keeps inputs visible above the keyboard) |
+| Layout and icons | `react-native-safe-area-context`, `react-native-screens`, `@expo/vector-icons` |
 
-Validation: height and weight must be positive numbers (blank is allowed for optional fields), with friendly messages.
-Upgrading from 1.0 keeps your workouts, unit choice and reminder.
+## Getting started
 
-## Requirements map (workout core, FR-01 to FR-12)
+### Prerequisites
 
-| ID | Where |
-| --- | --- |
-| FR-01 Exercise library | Add exercise screen: 45 starter exercises grouped by muscle group, plus custom exercises |
-| FR-02 Templates | Workouts tab: Full Body A, Upper Body, Lower Body |
-| FR-03 Start a workout | Starting a template creates a saved session with 3 starter sets per exercise |
-| FR-04 Log a set | Edit reps and weight; weight is stored in kg and converted for display |
-| FR-05 Complete a set | Check button on each set; only completed weighted sets count toward best set |
-| FR-06 Add an exercise | Active workout > Add exercise (library or custom) |
-| FR-07 Finish a session | Finish saves the end time; needs at least one completed set |
-| FR-08 Workout history | History tab, grouped by date, tap for details |
-| FR-09 Progress summary | Home: workouts this week and the heaviest completed set with its exercise name |
-| FR-10 Weight unit | Settings: kg or lb |
-| FR-11 Daily reminder | Settings: switch on, pick 7:00 AM / 9:00 AM / 6:00 PM / 8:00 PM, change time, or switch off |
-| FR-12 Persistence | SQLite: exercises, sessions, sets, preferences |
+- [Node.js](https://nodejs.org) **22.13 or newer** (or 24.3 or newer), as required by Expo SDK 58 and React Native 0.88
+- npm (included with Node.js)
+- An Android phone with the **Expo Go** app from the Google Play Store, or an Android emulator
+- For a phone: the computer and the phone on the same Wi-Fi network
 
-## Project structure
+### Run in development
 
-```
-src/app/                  Expo Router screens (file = route)
-  (tabs)/index.js           Home
-  (tabs)/workouts.js        Template list
-  (tabs)/history.js         Saved sessions
-  (tabs)/settings.js        Unit + reminder + data
-  workout/[id].js           Active workout
-  session/[id].js           Saved workout details
-  picker.js                 Exercise picker (modal)
-src/db/                   schema, migration, starter exercises
-src/repo/                 all SQLite operations
-src/services/             workout rules and progress calculations
-src/notifications/        reminder scheduling (only place that touches expo-notifications)
-src/data/templates.js     the three templates
-src/app/builder.js        Workout builder (create / edit)
-src/app/routine/[id].js   Saved workout details: Start, Edit, Duplicate, Delete
-src/repo/customWorkouts.js  saved routines (plan only)
-src/services/routineService.js  builder validation and ordering rules
-src/state/pickerResult.js   hands chosen exercises from the picker back to the builder
-src/app/profile.js        My Profile
-src/app/(tabs)/weight.js  Weight log, goal progress and trend
-src/app/weight-entry.js   Add / edit / delete one check-in (modal)
-src/repo/profile.js       profile row (units, height, target, weekly goal)
-src/repo/weight.js        weight check-ins
-src/services/progressService.js   goal progress, weekly goal, greeting
+From the project folder:
+
+```bash
+npm install
+npx expo start
 ```
 
-Screens, SQLite operations and notification scheduling are separate modules, as the specification requires.
+Then either:
 
-## Rules
+- scan the QR code in the terminal with Expo Go on your phone, or
+- press `a` in the terminal to open an Android emulator that is already running.
 
-- Best set: highest weight among completed sets above 0 in completed sessions. Ties go to more reps, then the most recent.
-- Weekly count: completed sessions started Monday to Sunday of this week (device time).
-- Volume (History and details): sum of weight x reps of completed sets. A simple logging metric, not workout quality.
-- Reps must be a whole number above 0; weight cannot be negative (0 is allowed for bodyweight); custom exercise names cannot be blank.
-- Reminder permission is requested only when the switch is turned on. If denied, the reminder stays off and Settings explains why.
-- Current weight = the newest check-in. Goal progress runs from your first check-in to the target (works for losing or gaining).
-- Check-ins are stored as a calendar date (noon, local time); two on the same day are ordered by when they were added.
-- Data model (SQLite): `custom_workouts`, `custom_workout_items`, `user_profile` (one row), `weight_entries`, plus `exercises`, `workout_sessions`, `set_entries`, `app_preferences`.
-- In line with the specification, sets per exercise are fixed at 3 and routine editing, set removal and reordering are left for later.
+If the phone cannot connect directly (for example on a school or hotel network), use a tunnel:
 
-## Demo walkthrough (custom workouts)
-
-1. Workouts > Create workout. Name it "Push Day", add three exercises, give each different sets and reps, then Save.
-2. Close Expo Go completely and reopen it: "Push Day" is still listed under My workouts.
-3. Open it, Edit: move one exercise, remove another, Save.
-4. Start workout: it opens with the saved order and the planned sets. Mark sets done and Finish.
-5. Edit the routine again (or delete it), then open History: the finished session still shows its original exercises and sets.
-
-## Demo walkthrough (profile and progress)
-
-1. Home > Profile: enter a name, height, current weight and target weight, then Save.
-2. Switch the units (kg/lb, cm/ft-in) and show the values convert.
-3. Weight tab > Add a check-in (use Yesterday or Pick date). Show the new current weight, the trend and the target progress.
-4. Workouts > Start Full Body A. Edit reps and weight, mark sets done, add a custom exercise, then Finish.
-5. Home: show weekly goal progress ("1 of 3"), best set and reminder status. History: open the saved workout.
-6. Settings: change the weekly target, turn on the reminder, change its time.
-(Settings > Load demo data fills in a few weeks of example data if you want a quick start.)
-
-## Build the APK
-
-### Option A: locally (as in the specification)
-Needs JDK, Android SDK platform 36 and build tools, and NDK 27.1.12297006.
+```bash
+npx expo start --tunnel
 ```
+
+Expo Go must support the same Expo SDK as the project (SDK 58), so keep Expo Go updated from the Play Store. Expo Go is for development and previews. To install FitTrack as a normal app, build an APK as described next.
+
+## Build an Android APK
+
+The generated release build is signed with the project's debug signing configuration. That is fine for installing on your own device and for a class demonstration, but it must be signed with a private release key before it is published on the Play Store.
+
+### Option A: build locally
+
+You need Android Studio, a supported JDK (the one bundled with Android Studio works) and these packages, installed from **Android Studio > Tools > SDK Manager**:
+
+- Android SDK Platform 37 (compile SDK 37)
+- Android SDK Build-Tools 37.0.0
+- Android NDK 27.1.12297006
+
+Generate the native project:
+
+```bash
 npm install
 npx expo prebuild --platform android
 cd android
+```
+
+Tell Gradle where the Android SDK is, then build. The example uses the usual macOS location; use the path shown in SDK Manager if yours differs (on Linux it is commonly `$HOME/Android/Sdk`).
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
-The APK is at `android/app/build/outputs/apk/release/app-release.apk`. Copy it to the project folder as `FitTrack-Android.apk`.
-The generated project signs release builds with the debug key, which is fine for sideloading and the class demo, not for the Play Store.
 
-### Option B: Expo cloud build (no Android SDK needed)
+The APK is created at:
+
+```text
+android/app/build/outputs/apk/release/app-release.apk
 ```
+
+The command builds for 64-bit ARM phones, which covers current Android phones. To include every architecture React Native supports, leave out `-PreactNativeArchitectures=arm64-v8a`.
+
+### Option B: build with Expo Application Services (EAS)
+
+A cloud build needs no local Android SDK, but it requires a free Expo account and an internet connection.
+
+```bash
 npx eas-cli@latest login
 npx eas-cli@latest build --profile preview --platform android
 ```
-EAS uploads your project source. Download the APK from the link when it finishes, then open it on the phone
-(allow "install unknown apps" for your browser or file manager).
 
-## Verification checklist
+The `preview` profile in `eas.json` produces an installable APK (not an app bundle). When the build finishes, download the APK from the link shown in the terminal or on the EAS build page.
 
-| Scenario | Expected |
+### Install the APK
+
+Copy the APK to the phone and open it. Android may ask you to allow installing apps from the browser or file manager you used. After installing, allow notifications when you turn on the daily reminder.
+
+## Using the app
+
+| Tab | What you do there |
 | --- | --- |
-| Start a template and complete several sets | Template exercises open; completed sets stay done |
-| Add a custom exercise during a workout | It is saved to the library and added with 3 sets |
-| Finish a workout, close and reopen the app | It is in History with sets and duration |
-| Create "Push Day" with 3 exercises and different targets | Saved; listed in My workouts after restarting the app |
-| Enter 0, a negative or text as sets or reps | Message under that field; nothing is saved |
-| Save with no name or no exercises | Messages explain what is missing |
-| Start a saved workout | Exercise order and set counts match the plan |
-| Edit or delete a routine after using it | Past sessions in History are unchanged |
-| Switch kg to lb, or cm to ft-in | Values convert for display; stored kg and cm are unchanged |
-| Save profile, close and reopen the app | Name, height, target and check-ins are still there |
-| Enter 0, a negative number or text as weight or height | Clear message; nothing is saved |
-| Add, edit and delete check-ins | Newest entry becomes current weight; Home and Weight tab update |
-| Finish workouts and change the weekly target | Home shows completed sessions against the target |
-| Clear profile / clear weight history | Data removed after confirmation; workouts kept |
-| Turn the reminder on and allow permission | One daily reminder is scheduled at the chosen time |
-| Change the time or turn it off | The old schedule is replaced or cancelled |
-| Deny the permission prompt | Reminder stays off with an explanation and a button to open Android settings |
+| **Home** | See your week at a glance, resume a workout in progress, start a workout, and open your Profile |
+| **Workouts** | Start a built-in workout, or create, start, edit, duplicate and delete your own |
+| **History** | Review finished workouts and open any one for its full set list |
+| **Weight** | Add, edit and delete dated weight check-ins, and see your trend and goal progress |
+| **Settings** | Choose units, set the weekly workout goal, manage the daily reminder, and control your data |
+
+A typical session:
+
+1. **Set up your profile.** On Home, open **Profile** and enter a name, height, current weight and an optional target weight.
+2. **Choose your goals.** In **Settings**, set the weekly workout goal and, if you like, turn on the daily reminder and pick a time.
+3. **Pick a workout.** In **Workouts**, start a built-in workout, or choose **Create workout** to build your own: name it, add exercises, set sets and target reps for each, reorder them and save.
+4. **Log your sets.** Adjust reps and weight, tap the check button on each set you complete, and use **Add exercise** for anything extra. Tap **Finish** when you are done.
+5. **Review.** Open **History** for finished workouts and the **Weight** tab for your trend and goal progress.
+
+For a quick demonstration, open **Settings > Load demo data**. It adds about four weeks of example workouts, weight check-ins, a sample "Push Day" custom workout, and an example name, height and target if your profile is still empty. Your own data is never overwritten.
+
+## Project structure
+
+```text
+FitTrack/
+├── assets/                App icon, adaptive Android icons and splash image
+├── src/
+│   ├── app/               Screens, one file per route (Expo Router)
+│   │   ├── (tabs)/          Home, Workouts, History, Weight, Settings
+│   │   ├── workout/[id]     Active workout
+│   │   ├── session/[id]     Saved workout details
+│   │   ├── routine/[id]     Custom workout details
+│   │   ├── builder.js       Custom workout builder
+│   │   ├── picker.js        Exercise picker (library, search, custom exercises)
+│   │   ├── profile.js       Profile
+│   │   └── weight-entry.js  Add, edit or delete a weight check-in
+│   ├── components/        Shared interface pieces (buttons, set row, trend chart, ...)
+│   ├── context/           Display units shared across the app
+│   ├── data/              Built-in workout definitions
+│   ├── db/                Database setup, migrations and starter exercises
+│   ├── notifications/     Reminder permission and scheduling
+│   ├── repo/              All database reads and writes
+│   ├── services/          Workout, routine and progress rules (plain functions)
+│   ├── state/             Hands exercises picked in the picker back to the builder
+│   ├── utils/             Date, unit-conversion and validation helpers
+│   └── theme.js           Colors, spacing and touch-target size
+├── app.json               Expo configuration, plugins and app identifier
+├── eas.json               EAS build profile (APK)
+└── package.json           Dependencies and scripts
+```
+
+The code is split into layers. Screens show data and handle taps. `services` hold the rules and calculations. `repo` is the only place that talks to SQLite, and `notifications` is the only place that schedules reminders. This keeps each part easy to test and change on its own.
+
+## Local data
+
+All data lives in one SQLite database on the phone. Database upgrades run automatically at startup, inside transactions, and existing data is kept.
+
+| Table | Purpose |
+| --- | --- |
+| `exercises` | Starter and custom exercises with muscle group and equipment |
+| `workout_sessions` | Each started workout: title, start time and end time |
+| `set_entries` | Every set: exercise, set number, reps, weight in kg and done state |
+| `custom_workouts` | Saved custom workouts (name and timestamps) |
+| `custom_workout_items` | The ordered exercises of a custom workout with target sets and reps |
+| `user_profile` | One row: name, height in cm, target weight in kg, units and weekly goal |
+| `weight_entries` | Dated weight check-ins in kg, with an optional note |
+| `app_preferences` | Reminder settings and the scheduled notification ID |
+
+Deleting a custom workout removes only its own rows. It never deletes library exercises or past workout sessions.
+
+## Design and accessibility
+
+Colors, spacing and touch-target size are defined once in `src/theme.js`:
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `primary` | `#0F766E` | Main actions and brand color |
+| `primaryDark` | `#115E59` | Text on the light teal background |
+| `primaryLight` | `#CCFBF1` | Badges and highlights |
+| `bg` / `card` | `#F3F5F7` / `#FFFFFF` | App background and cards |
+| `text` / `muted` | `#111827` / `#4B5563` | Main and secondary text |
+| `border` | `#CBD5E1` | Dividers and input borders |
+| `danger` / `dangerLight` | `#B91C1C` / `#FEE2E2` | Destructive actions and errors |
+| `success` | `#047857` | Completed sets and confirmations |
+
+- **Touch targets:** every control is at least 48 × 48 dp.
+- **Contrast:** text colors were checked against their backgrounds at 4.5:1 or better.
+- **Not color alone:** completed sets, selected options, errors and progress values are also shown with an icon or text.
+- **Screen readers:** controls have roles, labels and states, and progress bars report their value.
+
+## Privacy
+
+- All records stay on the device. FitTrack has no account, cloud backup or sync, and its own code makes no network requests.
+- Reminders are scheduled locally on the phone. No push service is used.
+- Clearing the app's storage or uninstalling the app permanently removes its data unless you backed it up separately.
+- In **Settings** you can clear your profile, your weight history, your workout history, or erase everything.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| `npm install` or `npx expo start` fails right away | Check `node -v`. Expo SDK 58 needs Node 22.13 or newer (or 24.3+). |
+| Expo Go says the project is incompatible | Update Expo Go from the Play Store. The project uses Expo SDK 58. |
+| Expo Go cannot connect after scanning the QR code | Use `npx expo start --tunnel`, and check that the phone and computer are on the same network. |
+| The daily reminder does not appear | Allow notifications for the app in Android settings and make sure battery saving is not restricting it. Turning the reminder off and on again reschedules it. |
+| Reminder permission was declined | In Settings, use **Open Android settings**, allow notifications, then turn the reminder on again. |
+| Gradle cannot find the Android SDK | Check that `android/local.properties` contains `sdk.dir` pointing to your SDK folder. |
+| The phone refuses to install the APK | Allow "install unknown apps" for the app you opened the APK from. |
+
+## Not included
+
+FitTrack is deliberately a focused, offline app. These are outside its scope: cloud sync or accounts, sharing workouts, supersets and rest timers, nutrition tracking, wearable integration, progress photos, automatic training plans, and adding or deleting individual sets during a workout.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
